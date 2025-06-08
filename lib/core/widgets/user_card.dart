@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/user_model.dart';
-import '../utils/date_utils.dart';
+import '../utils/date_utils.dart' as AppDateUtils;
 
 class UserCard extends StatelessWidget {
   final UserModel user;
@@ -83,7 +83,7 @@ class UserCard extends StatelessWidget {
               SizedBox(height: 8),
               _buildInfoItem(
                 Icons.calendar_today,
-                'ينتهي في: ${formatArabicDate(user.validationEndDate!)}',
+                'ينتهي في: ${AppDateUtils.formatArabicDate(user.validationEndDate!)}',
                 color: _getValidationColor(),
               ),
             ],

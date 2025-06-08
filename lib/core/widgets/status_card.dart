@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../models/client_model.dart';
+import '../utils/status_calculator.dart';
 
 class StatusCard extends StatelessWidget {
   final ClientStatus status;
@@ -13,29 +14,21 @@ class StatusCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    Color color;
-    String text;
+    Color color = StatusCalculator.getStatusColor(status);
+    String text = StatusCalculator.getStatusText(status);
     IconData icon;
 
     switch (status) {
       case ClientStatus.green:
-        color = Colors.green;
-        text = 'آمن';
         icon = Icons.check_circle;
         break;
       case ClientStatus.yellow:
-        color = Colors.orange;
-        text = 'تحذير';
         icon = Icons.warning;
         break;
       case ClientStatus.red:
-        color = Colors.red;
-        text = 'خطر';
         icon = Icons.error;
         break;
       case ClientStatus.white:
-        color = Colors.grey;
-        text = 'خرج';
         icon = Icons.flight_takeoff;
         break;
     }

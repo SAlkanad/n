@@ -1,4 +1,4 @@
-import '../models/client_model.dart';
+import '../../models/client_model.dart';
 
 class ValidationUtils {
   static String? validateRequired(String? value) {

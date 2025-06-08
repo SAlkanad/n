@@ -3,8 +3,8 @@ import 'dart:io';
 import '../models/client_model.dart';
 import '../models/user_model.dart';
 import '../models/notification_model.dart';
-import '../models/settings_model.dart';
 import '../core/constants/firebase_constants.dart';
+import '../core/utils/status_calculator.dart';
 import 'image_service.dart';
 
 class DatabaseService {

@@ -1,4 +1,4 @@
-import '../models/client_model.dart';
+import '../../models/client_model.dart';
 import 'package:flutter/material.dart';
 
 class StatusCalculator {

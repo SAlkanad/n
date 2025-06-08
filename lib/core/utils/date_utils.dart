@@ -1,8 +1,14 @@
 import 'package:intl/intl.dart';
 
 String formatArabicDate(DateTime date) {
-  final formatter = DateFormat('yyyy/MM/dd', 'ar');
-  return formatter.format(date);
+  try {
+    final formatter = DateFormat('yyyy/MM/dd', 'ar');
+    return formatter.format(date);
+  } catch (e) {
+    // Fallback if Arabic locale is not available
+    final formatter = DateFormat('yyyy/MM/dd');
+    return formatter.format(date);
+  }
 }
 
 String formatTimeAgo(DateTime date) {
@@ -21,18 +27,36 @@ String formatTimeAgo(DateTime date) {
 }
 
 String formatDateTime(DateTime date) {
-  final formatter = DateFormat('yyyy/MM/dd HH:mm', 'ar');
-  return formatter.format(date);
+  try {
+    final formatter = DateFormat('yyyy/MM/dd HH:mm', 'ar');
+    return formatter.format(date);
+  } catch (e) {
+    // Fallback if Arabic locale is not available
+    final formatter = DateFormat('yyyy/MM/dd HH:mm');
+    return formatter.format(date);
+  }
 }
 
 String formatTime(DateTime date) {
-  final formatter = DateFormat('HH:mm', 'ar');
-  return formatter.format(date);
+  try {
+    final formatter = DateFormat('HH:mm', 'ar');
+    return formatter.format(date);
+  } catch (e) {
+    // Fallback if Arabic locale is not available
+    final formatter = DateFormat('HH:mm');
+    return formatter.format(date);
+  }
 }
 
 DateTime parseArabicDate(String dateString) {
-  final formatter = DateFormat('yyyy/MM/dd', 'ar');
-  return formatter.parse(dateString);
+  try {
+    final formatter = DateFormat('yyyy/MM/dd', 'ar');
+    return formatter.parse(dateString);
+  } catch (e) {
+    // Fallback if Arabic locale is not available
+    final formatter = DateFormat('yyyy/MM/dd');
+    return formatter.parse(dateString);
+  }
 }
 
 bool isSameDay(DateTime date1, DateTime date2) {

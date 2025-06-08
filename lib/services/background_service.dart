@@ -3,6 +3,7 @@ import '../models/client_model.dart';
 import '../models/user_model.dart';
 import '../models/notification_model.dart';
 import '../core/utils/status_calculator.dart';
+import '../core/constants/message_templates.dart';
 import 'database_service.dart';
 import 'notification_service.dart';
 
@@ -67,8 +68,11 @@ class BackgroundService {
         final notification = NotificationModel(
           id: '${client.id}_${DateTime.now().millisecondsSinceEpoch}',
           type: NotificationType.clientExpiring,
-          title: 'تنبيه انتهاء تأشيرة',
-          message: message.replaceAll('{clientName}', client.clientName),
+          title: MessageTemplates.notificationTitles['client_expiring'] ?? 'تنبيه انتهاء تأشيرة',
+          message: MessageTemplates.formatMessage(message, {
+            'clientName': client.clientName,
+            'daysRemaining': client.daysRemaining.toString(),
+          }),
           targetUserId: client.createdBy,
           clientId: client.id,
           priority: _getPriorityFromDays(client.daysRemaining),
@@ -126,8 +130,11 @@ class BackgroundService {
         final notification = NotificationModel(
           id: '${user.id}_validation_${DateTime.now().millisecondsSinceEpoch}',
           type: NotificationType.userValidationExpiring,
-          title: 'تنبيه انتهاء صلاحية الحساب',
-          message: message,
+          title: MessageTemplates.notificationTitles['user_validation'] ?? 'تنبيه انتهاء صلاحية الحساب',
+          message: MessageTemplates.formatMessage(message, {
+            'userName': user.name,
+            'daysRemaining': daysRemaining.toString(),
+          }),
           targetUserId: user.id,
           priority: _getPriorityFromDays(daysRemaining),
           createdAt: DateTime.now(),
@@ -156,6 +163,19 @@ class BackgroundService {
             user.validationEndDate!.isBefore(DateTime.now()) &&
             !user.isFrozen) {
           await DatabaseService.freezeUser(user.id, 'انتهت صلاحية الحساب تلقائياً');
+          
+          // Send freeze notification
+          final freezeNotification = NotificationModel(
+            id: '${user.id}_freeze_${DateTime.now().millisecondsSinceEpoch}',
+            type: NotificationType.userValidationExpiring,
+            title: MessageTemplates.notificationTitles['user_freeze'] ?? 'تم تجميد الحساب',
+            message: MessageTemplates.userMessages['validation_expired'] ?? 'انتهت صلاحية حسابك. تم تجميد الحساب.',
+            targetUserId: user.id,
+            priority: NotificationPriority.high,
+            createdAt: DateTime.now(),
+          );
+          
+          await DatabaseService.saveNotification(freezeNotification);
         }
       }
     } catch (e) {

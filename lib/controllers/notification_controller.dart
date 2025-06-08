@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../models/notification_model.dart';
 import '../models/client_model.dart';
 import '../models/user_model.dart';
+import '../core/utils/status_calculator.dart';
+import '../core/constants/message_templates.dart';
 import '../services/database_service.dart';
 import '../services/notification_service.dart';
 import '../services/whatsapp_service.dart';
@@ -58,10 +60,18 @@ class NotificationController extends ChangeNotifier {
 
   Future<void> sendWhatsAppToClient(ClientModel client, String message) async {
     try {
+      final formattedMessage = MessageTemplates.formatMessage(
+        message,
+        {
+          'clientName': client.clientName,
+          'daysRemaining': client.daysRemaining.toString(),
+        }
+      );
+      
       await WhatsAppService.sendClientMessage(
         phoneNumber: client.clientPhone,
         country: client.phoneCountry,
-        message: message,
+        message: formattedMessage,
         clientName: client.clientName,
       );
     } catch (e) {
@@ -82,9 +92,16 @@ class NotificationController extends ChangeNotifier {
 
   Future<void> sendWhatsAppToUser(UserModel user, String message) async {
     try {
+      final formattedMessage = MessageTemplates.formatMessage(
+        message,
+        {
+          'userName': user.name,
+        }
+      );
+      
       await WhatsAppService.sendUserMessage(
         phoneNumber: user.phone,
-        message: message,
+        message: formattedMessage,
         userName: user.name,
       );
     } catch (e) {
@@ -123,6 +140,25 @@ class NotificationController extends ChangeNotifier {
       if (client.daysRemaining <= days && client.daysRemaining > 0) {
         for (int i = 0; i < frequency; i++) {
           final scheduledTime = DateTime.now().add(Duration(hours: i * (24 ~/ frequency)));
+          
+          // Create notification record
+          final notification = NotificationModel(
+            id: '${client.id}_${scheduledTime.millisecondsSinceEpoch}',
+            type: NotificationType.clientExpiring,
+            title: MessageTemplates.notificationTitles['client_expiring'] ?? 'تنبيه انتهاء تأشيرة',
+            message: MessageTemplates.formatMessage(message, {
+              'clientName': client.clientName,
+              'daysRemaining': client.daysRemaining.toString(),
+            }),
+            targetUserId: client.createdBy,
+            clientId: client.id,
+            priority: _getPriorityFromDays(client.daysRemaining),
+            createdAt: DateTime.now(),
+            scheduledFor: scheduledTime,
+          );
+          
+          await DatabaseService.saveNotification(notification);
+          
           await NotificationService.scheduleClientNotification(
             clientId: client.id,
             clientName: client.clientName,
@@ -130,7 +166,89 @@ class NotificationController extends ChangeNotifier {
             scheduledTime: scheduledTime,
           );
         }
+        break; // Only schedule for the most relevant tier
       }
     }
+  }
+
+  Future<void> createClientExpiringNotification(ClientModel client) async {
+    try {
+      final settings = await DatabaseService.getAdminSettings();
+      final whatsappMessages = settings['whatsappMessages'] ?? {};
+      final defaultMessage = whatsappMessages['clientMessage'] ?? 
+          MessageTemplates.whatsappMessages['client_default'];
+
+      final notification = NotificationModel(
+        id: '${client.id}_expiring_${DateTime.now().millisecondsSinceEpoch}',
+        type: NotificationType.clientExpiring,
+        title: MessageTemplates.notificationTitles['client_expiring'] ?? 'تنبيه انتهاء تأشيرة',
+        message: MessageTemplates.formatMessage(defaultMessage, {
+          'clientName': client.clientName,
+          'daysRemaining': client.daysRemaining.toString(),
+        }),
+        targetUserId: client.createdBy,
+        clientId: client.id,
+        priority: _getPriorityFromDays(client.daysRemaining),
+        createdAt: DateTime.now(),
+      );
+
+      await DatabaseService.saveNotification(notification);
+      _notifications.insert(0, notification);
+      notifyListeners();
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  Future<void> createUserValidationNotification(UserModel user) async {
+    try {
+      final daysRemaining = user.validationEndDate?.difference(DateTime.now()).inDays ?? 0;
+      final settings = await DatabaseService.getAdminSettings();
+      final whatsappMessages = settings['whatsappMessages'] ?? {};
+      final defaultMessage = whatsappMessages['userMessage'] ?? 
+          MessageTemplates.whatsappMessages['user_default'];
+
+      final notification = NotificationModel(
+        id: '${user.id}_validation_${DateTime.now().millisecondsSinceEpoch}',
+        type: NotificationType.userValidationExpiring,
+        title: MessageTemplates.notificationTitles['user_validation'] ?? 'تنبيه انتهاء صلاحية الحساب',
+        message: MessageTemplates.formatMessage(defaultMessage, {
+          'userName': user.name,
+          'daysRemaining': daysRemaining.toString(),
+        }),
+        targetUserId: user.id,
+        priority: _getPriorityFromDays(daysRemaining),
+        createdAt: DateTime.now(),
+      );
+
+      await DatabaseService.saveNotification(notification);
+      _notifications.insert(0, notification);
+      notifyListeners();
+    } catch (e) {
+      throw e;
+    }
+  }
+
+  NotificationPriority _getPriorityFromDays(int days) {
+    if (days <= 2) return NotificationPriority.high;
+    if (days <= 5) return NotificationPriority.medium;
+    return NotificationPriority.low;
+  }
+
+  // Helper methods for filtering notifications
+  List<NotificationModel> getClientNotifications() {
+    return _notifications.where((n) => n.type == NotificationType.clientExpiring).toList();
+  }
+
+  List<NotificationModel> getUserNotifications() {
+    return _notifications.where((n) => n.type == NotificationType.userValidationExpiring).toList();
+  }
+
+  List<NotificationModel> getUnreadNotifications() {
+    return _notifications.where((n) => !n.isRead).toList();
+  }
+
+  int getUnreadCount() {
+    return _notifications.where((n) => !n.isRead).length;
   }
 }
