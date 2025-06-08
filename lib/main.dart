@@ -16,7 +16,7 @@ import 'core/theme/app_theme.dart';
 import 'services/notification_service.dart';
 import 'services/background_service.dart';
 import 'services/status_update_service.dart';
-import 'setup_initial_data.dart';
+
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,13 +30,9 @@ void main() async {
   await NotificationService.initialize();
   tz.initializeTimeZones();
   
-  // Setup database on first run
-  try {
-    await DatabaseSetup.setupCompleteDatabase();
-  } catch (e) {
-    print('⚠️ Database setup error: $e');
-    // Continue app launch even if setup fails
-  }
+  
+  
+  
   
   // Start background services
   BackgroundService.startBackgroundTasks();
